@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hsl-embedding"
+version = "0.3.0"
+description = "HSL (Holistic Signal Language): a non-learned, byte-level signal encoder for PyTorch — one modality-agnostic 27-D exact base embedding. Δ = per-byte POSITION from a symbolic anchor (byte-independent), Δ² = cross-byte FLOW/momentum, exact complex Fourier + phase; no tokenizer, losslessly invertible."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Jinhyun Woo", email = "ggunio5782@gmail.com" }]
+keywords = ["embedding", "byte-native", "multimodal", "tokenizer-free", "signal", "change-rate", "pytorch"]
+dependencies = ["numpy>=1.21", "torch>=1.12"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/Woojiggun/holo-hsl"
+Paper = "https://doi.org/10.5281/zenodo.20581805"
+Demo = "https://holo-demo-p5txmh4dda-as.a.run.app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hsl_embedding"]
