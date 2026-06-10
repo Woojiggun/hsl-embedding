@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use HSL, please cite it as below."
+type: software
+title: "HSL: a byte-native, modality-agnostic signal embedding"
+authors:
+  - family-names: Woo
+    given-names: Jinhyun
+    email: ggunio5782@gmail.com
+version: 0.5.0
+date-released: 2026-06-10
+license: MIT
+repository-code: "https://github.com/Woojiggun/hsl-embedding"
+url: "https://pypi.org/project/hsl-embedding/"
+keywords:
+  - embedding
+  - byte-native
+  - multimodal
+  - tokenizer-free
+  - signal
+  - change-rate
+  - gray-code
+  - pytorch
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20581805
+    description: "Companion paper (feasibility study)"
+preferred-citation:
+  type: article
+  title: "A Feasibility Study of Change-Rate-Based Multimodal Unification"
+  authors:
+    - family-names: Woo
+      given-names: Jinhyun
+  year: 2026
+  doi: 10.5281/zenodo.20581805

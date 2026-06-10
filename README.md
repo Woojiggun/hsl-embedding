@@ -1,5 +1,6 @@
 # HSL — Holistic Signal Language
 
+[![PyPI](https://img.shields.io/pypi/v/hsl-embedding.svg)](https://pypi.org/project/hsl-embedding/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20581805.svg)](https://doi.org/10.5281/zenodo.20581805)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -215,6 +216,6 @@ copyright notice and attribution to **Jinhyun Woo** are kept. See [LICENSE](LICE
   title  = {HSL: a byte-native, modality-agnostic signal embedding},
   year   = {2026},
   doi    = {10.5281/zenodo.20581805},
-  url    = {https://github.com/Woojiggun/holo-hsl}
+  url    = {https://github.com/Woojiggun/hsl-embedding}
 }
 ```
