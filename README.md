@@ -63,7 +63,7 @@ throw away. The default is the **27-D exact base** — the pure change-rate subs
 
 | channel (dims) | exact formula | captures | especially good for |
 |---|---|---|---|
-| **Δ** `dxor` 0–7 (8) | **per-byte** XOR-delta from the symbolic anchor 0 (each byte from the anchor → **byte-INDEPENDENT POSITION**) | **change / position** — *where the signal sits, measured from the 0-anchor* | edges, topic/region shifts, the modality-shared "rate of change". *Measured: shift-detection AUC **0.725** vs content **0.698**.* |
+| **Δ** `dxor` 0–7 (8) | **per-byte** XOR-delta from the symbolic anchor 0 (each byte from the anchor → **byte-INDEPENDENT POSITION**); ≡ the byte's binary-reflected **Gray code** `v ^ (v >> 1)`, so values that differ by ±1 differ in exactly **one** Δ coordinate | **change / position** — *where the signal sits, measured from the 0-anchor* | edges, topic/region shifts, the modality-shared "rate of change". *Measured: shift-detection AUC **0.725** vs content **0.698**.* |
 | **Δ²** `d2xor` 0–7 (8) | `Δ[byteᵢ] ⊕ Δ[byteᵢ₋₁]` (cross-byte) | **flow / momentum** (2nd order) — how the per-byte position changes *between* bytes | sharp **corners / onsets**; segment cuts, audio attacks, image corners |
 | **boundary** (1) | windowed mean of `Δ + 0.5·Δ²` (편미분 경계) | **transition-energy salience** (1st+2nd derivative) | **tokenizer-free segmentation** — natural byte/word/chunk cuts without decoding (heuristic; not part of the codec) |
 | **Fourier** `fft_re0–4, fft_im1–3` (8) | **exact** complex 8-bit rFFT (real+imag) | **frequency / texture / periodicity — *and* spectral phase** | smooth vs busy, periodic vs random — audio timbre, image texture. **Lossless/invertible** (`irfft` → byte) |
@@ -104,6 +104,18 @@ emb = hsl.Embedding()
 feats, phase, mask = emb.pack([b"a", b"abcdef"], max_len=8)   # [B, L, D], [B, L], [B, L]
 ```
 
+## Tensor / GPU path (v0.4)
+
+`Embedding` also accepts **integer tensors of byte values** (0..255) — batched, on any device, and
+**bit-identical** to the bytes path. The LUTs ride along as non-persistent buffers (`state_dict()`
+stays empty; `.to(device)` moves them with your model):
+
+```python
+emb = hsl.Embedding().to(device)
+ids = torch.randint(0, 256, (B, L), device=device)   # byte values you already batched yourself
+feats = emb(ids)                                     # [B, L, 27] on `device` — torch ops end to end
+```
+
 ## Examples
 
 ```bash
@@ -133,6 +145,25 @@ top. See the paper and live demo:
 - 📄 Paper: [A Feasibility Study of Change-Rate-Based Multimodal Unification](https://doi.org/10.5281/zenodo.20581805) (Zenodo)
 - 🌐 Live demo: https://holo-demo-p5txmh4dda-as.a.run.app
 - 💻 HoLo project: https://github.com/Woojiggun/holo-hsl
+
+## Changelog
+
+**0.4.0** — fast paths & exactness hardening. **Feature values are unchanged — bit-identical to 0.3.0** (verified over text/image/audio/random/edge inputs × all flag combos):
+
+- **Tensor / GPU path**: `Embedding()(ids)` with integer tensors `[..., L]` — batched, device-agnostic,
+  bit-identical to the bytes path (measured ~30× faster than the 0.3 bytes path on CUDA, ~2.7× on CPU).
+- `embed()` now computes straight from 256-entry LUTs (no per-call bit unpacking) — valid precisely
+  because of the **anchor rule**: every byte departs from the same virtual origin 0, so every per-byte
+  channel is a pure function of the byte's own value.
+- **`boundary` made exact at every input length**: 0.3.0 accumulated the windowed transition energy in a
+  float32 running sum, which silently rounded the boundary channel above ~1.4 MB of input (on a 3 MB
+  random input, ~44% of rows were off by up to 1.0). Now closed-form per-window sums with a float64
+  divide — exact at any length. All other channels were already exact; **no approximation ships**.
+- Documented the identity **Δ(v) ≡ binary-reflected Gray code** `v ^ (v >> 1)` — adjacent byte values
+  differ in exactly one Δ coordinate (raw bits flip up to all 8, e.g. 127→128); exhaustive anchor-rule
+  tests added (every byte's Δ is identical alone, after any prefix, at any position).
+- Removed the dead legacy chain-mode helpers (`_xor_delta`, `_integrate`, `_bits_to_bytes`) — only the
+  per-byte anchor rule ships.
 
 ## License & citation
 

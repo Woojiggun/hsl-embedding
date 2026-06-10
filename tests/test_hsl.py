@@ -74,6 +74,92 @@ def test_no_lossy_or_dead_symbols():
     assert not hasattr(hsl, "FEAT_DIM_EXACT")
     assert not hasattr(hsl, "_FOURIER_EXACT_LUT")
     assert not hasattr(hsl, "_hf_energy")
+    # v0.4: the legacy CHAIN-mode helpers are gone too — only the per-byte anchor rule ships
+    assert not hasattr(hsl, "_xor_delta")
+    assert not hasattr(hsl, "_integrate")
+    assert not hasattr(hsl, "_bits_to_bytes")
+
+
+def test_every_byte_departs_from_the_same_virtual_origin():
+    # THE ANCHOR RULE: each byte's Δ is measured from the SAME virtual origin 0 — never from the
+    # previous byte's last bit. So a byte's Δ is identical alone, after ANY prefix, at ANY position.
+    lone = {v: hsl.encode(bytes([v])).delta.tolist() for v in range(256)}     # Δ of every value alone
+    for prefix in (b"\x00", b"\xff", b"\xaa\x55", b"prefix \xf0\x0f"):
+        for v in range(256):                                                  # exhaustive over all byte values
+            d = hsl.encode(prefix + bytes([v])).delta.reshape(-1, 8)
+            assert d[-1].tolist() == lone[v]          # Δ does not depend on what came before
+    # position-independence at distance: value 200 at positions 0 and 9999 has the very same Δ row
+    far = hsl.encode(bytes([200]) + b"\x37" * 9998 + bytes([200])).delta.reshape(-1, 8)
+    assert far[0].tolist() == far[-1].tolist() == lone[200]
+    # and the embedding's Δ channel (first 8 dims) obeys the same rule
+    f1, _ = hsl.embed(bytes([200]))
+    f2, _ = hsl.embed(b"\x37" * 9999 + bytes([200]))
+    assert torch.equal(f1[0, :8], f2[-1, :8])
+
+
+def test_dxor_is_the_gray_code():
+    # identity: Δ(v) ≡ binary-reflected Gray code v ^ (v >> 1) — a consequence of the anchor rule
+    v = np.arange(256, dtype=np.uint8)
+    gray_bits = np.unpackbits((v ^ (v >> 1))[:, None], axis=1)
+    dx = hsl.encode(bytes(range(256))).delta.reshape(256, 8)
+    assert (dx == gray_bits).all()
+    adj = (gray_bits[1:] ^ gray_bits[:-1]).sum(1)
+    assert adj.min() == 1 and adj.max() == 1          # ±1 value change moves exactly ONE Δ coordinate
+
+
+def test_bounded_finite_and_no_drift():
+    # no approximation, no divergence, no decay-to-zero: every channel is bounded and finite, and
+    # features at position 100000 are exactly what they are at position 2 (no recurrence anywhere)
+    rng = np.random.RandomState(7)
+    long_random = rng.randint(0, 256, 65536, dtype=np.uint8).tobytes()
+    for include_bits in (False, True):
+        for momentum_phase in (False, True):
+            for data in (bytes(range(256)) * 8, long_random, b"\x00" * 4096, b"\xff" * 4096):
+                f, p = hsl.embed(data, include_bits=include_bits, momentum_phase=momentum_phase)
+                assert torch.isfinite(f).all() and torch.isfinite(p).all()
+                assert float(f.abs().max()) <= 8.0     # global bound (fft_re0 = bit count ≤ 8)
+    names = hsl.feat_names()
+    f, _ = hsl.embed(long_random)
+    assert float(f[:, names.index("boundary")].min()) >= 0.0     # boundary never goes negative
+    assert float(f[:, names.index("fft_re0")].min()) >= 0.0      # DC bin = bit count ≥ 0
+    g, _ = hsl.embed(b"\x42" * 100000)
+    assert torch.equal(g[2], g[50000]) and torch.equal(g[2], g[-1])   # constant stream → exactly constant
+    assert float(g[-1].abs().max()) > 0.0                             # ... and it never collapses to zero
+
+
+def test_boundary_is_exact_at_any_length():
+    # v0.3's float32 running sum rounded the boundary above ~1.4 MB; v0.4 is closed-form.
+    # Check bit-exact agreement with a float64 brute-force windowed mean.
+    rng = np.random.RandomState(3)
+    data = rng.randint(0, 256, 200_000, dtype=np.uint8).tobytes()
+    fr = hsl.encode(data)
+    e = fr.delta.astype(np.float64) + hsl.BOUNDARY_D2_WEIGHT * fr.delta2.astype(np.float64)
+    R = hsl.BOUNDARY_WINDOW_RADIUS
+    starts = np.arange(len(data)) * 8
+    csum = np.concatenate([[0.0], np.cumsum(e)])                 # float64 — exact reference
+    lo = np.maximum(0, starts - R)
+    hi = np.minimum(e.size, starts + R + 1)
+    ref = ((csum[hi] - csum[lo]) / (hi - lo)).astype(np.float32)
+    assert np.array_equal(fr.byte_boundary_score, ref)
+
+
+def test_tensor_path_is_bit_identical_to_bytes_path():
+    rng = np.random.RandomState(11)
+    raw = rng.randint(0, 256, 4096, dtype=np.uint8).tobytes()
+    for include_bits in (False, True):
+        for momentum_phase in (False, True):
+            emb = hsl.Embedding(include_bits=include_bits, momentum_phase=momentum_phase)
+            f_b, p_b = emb(raw, return_phase=True)
+            f_t, p_t = emb(torch.tensor(list(raw), dtype=torch.uint8), return_phase=True)
+            assert torch.equal(f_b, f_t) and torch.equal(p_b, p_t)
+    emb = hsl.Embedding()
+    batch = torch.randint(0, 256, (3, 257))                      # long ids, batched [B, L]
+    fb = emb(batch)
+    assert fb.shape == (3, 257, 27)
+    for i in range(3):
+        assert torch.equal(fb[i], emb(bytes(batch[i].tolist())))
+    assert emb(torch.zeros(2, 0, dtype=torch.long)).shape == (2, 0, 27)   # empty stays empty (tensor path)
+    assert len(emb.state_dict()) == 0                            # buffers non-persistent → checkpoint-compatible
 
 
 def test_momentum_phase_carries_velocity_without_extra_dims():

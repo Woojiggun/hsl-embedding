@@ -11,6 +11,11 @@ print("out_dim", emb.out_dim)
 x = emb(b"\x89PNG\r\n\x1a\n")              # works on image bytes just the same
 print("image bytes ->", tuple(x.shape))
 
+# 2b) v0.4 tensor path — batched integer ids, any device, bit-identical to the bytes path
+import torch
+ids = torch.randint(0, 256, (4, 32))       # [B, L] byte values (put on .to("cuda") if you have one)
+print("tensor ids ->", tuple(emb(ids).shape))
+
 # 3) named channels — read what each dimension means
 names = hsl.feat_names()                    # 27 base channel names (matches feats column order)
 row0 = feats[0]
