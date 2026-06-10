@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.1 — 2026-06-10
+
+Documentation only — no code changes; outputs identical to 0.5.0.
+
+- **Practical notes** added to the README and docstrings (things a model integrator must know):
+  - Channel scales are heterogeneous **by design** (`fft_re0` = DC bin spans 0–8, most channels
+    ±1–2) — apply per-feature scaling (e.g. `LayerNorm`) at the model input boundary; HSL ships
+    exact values, not normalized ones.
+  - Empty-input behavior made explicit: the bytes path returns `[1, 27]` (`embed(b"")` ≡ one `0x00`
+    byte, indistinguishable from `embed(b"\x00")`); the tensor path returns `[..., 0, 27]`.
+  - Clarified that the Fourier channels describe the byte's 8-bit pattern (not the waveform's
+    temporal spectrum) and that the phase channel is cyclic (255 wraps next to 0).
+- PyPI metadata now points at the dedicated repository (github.com/Woojiggun/hsl-embedding);
+  `CITATION.cff` ships in the sdist.
+
 ## 0.5.0 — 2026-06-10
 
 Substrate-ablation toolkit. **Core encoder untouched — outputs bit-identical to 0.4.0**; the base

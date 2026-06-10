@@ -6,7 +6,7 @@ authors:
   - family-names: Woo
     given-names: Jinhyun
     email: ggunio5782@gmail.com
-version: 0.5.0
+version: 0.5.1
 date-released: 2026-06-10
 license: MIT
 repository-code: "https://github.com/Woojiggun/hsl-embedding"

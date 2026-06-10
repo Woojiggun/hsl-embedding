@@ -77,6 +77,22 @@ which ones each modality needs (no premature compression at the base).
 *Optional 35-D:* `include_bits=True` prepends the 8 raw byte bits. They're **redundant** (the per-byte Δ
 already encodes each byte losslessly) — an optional extra lens, not part of the base.
 
+## Practical notes (read before wiring into a model)
+
+- **Channel scales are heterogeneous by design** — HSL ships *exact* values, not normalized ones.
+  `fft_re0` (the DC bin = the byte's bit count) spans **0–8** while most channels sit in ±1–2.
+  Apply per-feature scaling at the model input boundary (a `LayerNorm` right after HSL, or a learned
+  `Linear(27, d)` — either works); feeding raw features straight into attention lets `fft_re0`
+  dominate early training.
+- **Empty input:** the bytes path returns `[1, 27]` — `embed(b"")` is treated as a single `0x00`
+  byte (deliberate, keeps downstream batching safe), so it is **indistinguishable from
+  `embed(b"\x00")`**. The tensor path instead returns `[..., 0, 27]` for zero-length ids
+  (batching/padding is the caller's job there). If your pipeline must tell empties apart, mask them
+  upstream.
+- **Fourier channels read the byte's 8-bit pattern**, not the waveform's temporal spectrum (values
+  127 and 128 are spectrally distant); the **phase channel is cyclic**, so byte 255 sits next to
+  byte 0. Every lens is exact — which lens fits which modality is your model's call, downstream.
+
 ## Lossless by construction
 
 The features are grounded in a lossless codec, so the substrate is byte-exact:
@@ -179,6 +195,10 @@ top. See the paper and live demo:
 - 💻 HoLo project: https://github.com/Woojiggun/holo-hsl
 
 ## Changelog
+
+**0.5.1** — docs only: "Practical notes" (heterogeneous channel scales — normalize at the model
+input boundary; empty-input behavior on both paths; Fourier = bit-pattern spectrum, phase is
+cyclic). PyPI metadata now points at this dedicated repo.
 
 **0.5.0** — substrate-ablation toolkit (`hsl_embedding.ablation`): channel-group selection
 (`feature_groups` / `select_channels`), the frozen 256×18 value-LUT export (`value_lut`), and

@@ -32,7 +32,9 @@ so the bits are redundant. Pass include_bits=True for the 35-D variant (raw bits
 All features are BOUNDED, finite and drift-free by construction: Δ/Δ² ∈ {0,1}, boundary ∈ [0, 1.5],
 Fourier ∈ [-4, 8] (fft_re0 = bit count ∈ [0, 8]), phase ∈ [-1, 1], momentum radius ∈ [0.5, ~0.998].
 There are no data-dependent divisions, logs or recurrences anywhere — nothing can produce NaN/Inf,
-diverge, or decay toward 0 with sequence length.
+diverge, or decay toward 0 with sequence length. Scales are heterogeneous BY DESIGN (fft_re0 spans
+0–8, most channels ±1–2): HSL ships exact values, not normalized ones — apply per-feature scaling
+(e.g. LayerNorm) at the model input boundary.
 
     import hsl_embedding as hsl
     feats, phase = hsl.embed(b"hello")     # [L, 27], [L]
@@ -52,7 +54,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 __all__ = ["__version__", "FEAT_DIM", "FEAT_DIM_FULL", "FEAT_NAMES", "FEAT_NAMES_FULL", "feat_names",
            "ORIGIN_BIT", "CLOSURE_BIT", "BOUNDARY_D2_WEIGHT", "BOUNDARY_WINDOW_RADIUS",
@@ -252,6 +254,10 @@ class Embedding(nn.Module):
     The tensor path is bit-identical to the bytes path. Buffers are non-persistent — state_dict()
     stays empty, so checkpoints saved around earlier versions load unchanged, and .to(device) moves
     the LUTs along with the model.
+
+    Empty input: the bytes path returns [1, out_dim] (b"" is treated as one 0x00 byte — documented
+    in embed()); the tensor path returns [..., 0, out_dim] for zero-length ids (batching/padding is
+    the caller's job there). Mask empties upstream if your pipeline must tell them apart.
     """
     def __init__(self, include_bits: bool = False, momentum_phase: bool = False):
         super().__init__()

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hsl-embedding"
-version = "0.5.0"
+version = "0.5.1"
 description = "HSL (Holistic Signal Language): a non-learned, byte-level signal encoder for PyTorch — one modality-agnostic 27-D exact base embedding. Δ = per-byte POSITION from a symbolic anchor (byte-independent), Δ² = cross-byte FLOW/momentum, exact complex Fourier + phase; no tokenizer, losslessly invertible."
 readme = "README.md"
 requires-python = ">=3.9"
