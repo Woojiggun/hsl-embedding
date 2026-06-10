@@ -20,15 +20,11 @@ keywords:
   - change-rate
   - gray-code
   - pytorch
+doi: 10.5281/zenodo.20628599
 identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20628599
+    description: "Software concept DOI (all versions — cite this for the code)"
   - type: doi
     value: 10.5281/zenodo.20581805
     description: "Companion paper (feasibility study)"
-preferred-citation:
-  type: article
-  title: "A Feasibility Study of Change-Rate-Based Multimodal Unification"
-  authors:
-    - family-names: Woo
-      given-names: Jinhyun
-  year: 2026
-  doi: 10.5281/zenodo.20581805
