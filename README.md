@@ -116,6 +116,37 @@ ids = torch.randint(0, 256, (B, L), device=device)   # byte values you already b
 feats = emb(ids)                                     # [B, L, 27] on `device` — torch ops end to end
 ```
 
+## Substrate ablation toolkit (v0.5)
+
+The 27-D base factors as **18 value dims** (Δ8 + Fourier8 + phase2 — pure functions of the byte's
+value, i.e. ONE frozen 256×18 LUT; a consequence of the anchor rule) + **9 context dims** (Δ²8 +
+boundary1, the only sequence-dependent channels). `hsl_embedding.ablation` ships the controlled A/Bs
+that isolate the value **geometry** — every control keeps HSL's exact context dims and the exact
+27-column layout, so the same downstream model runs unchanged:
+
+```python
+from hsl_embedding import ablation as ab
+
+ab.ControlEmbedding("hsl")                 # frozen exact LUT — the claim under test
+ab.ControlEmbedding("learned", seed=0)     # trainable nn.Embedding(256,18): can SGD find an equivalent?
+ab.ControlEmbedding("random", seed=0)      # FIXED injective LUT, HSL per-channel moments —
+                                           #   "is invertibility alone enough?" (it preserves all info)
+ab.ControlEmbedding("permuted", seed=0)    # HSL's own rows, permuted — identical marginals,
+                                           #   geometry destroyed: capacity vs geometry
+
+ab.feature_groups()["value"]               # 18 per-value dims / ["context"] → 9 sequence dims
+no_fft = ab.select_channels(feats, ("dxor", "d2xor", "boundary", "phase"))   # feature-family ablations
+```
+
+The cheapest, sharpest minimal pair needs no control at all: **raw bits (8) vs Δ (8)** — both
+per-byte invertible, identical information / dimensionality / {0,1} scale; the only difference is
+geometry (Δ ≡ Gray code: a ±1 value step moves exactly **one** coordinate; raw bits flip up to all 8).
+`embed(data, include_bits=True)` + `select_channels(..., ("bits",))` vs `("dxor",)`.
+
+```bash
+python examples/substrate_ablation.py     # the full protocol in one screen
+```
+
 ## Examples
 
 ```bash
@@ -147,6 +178,13 @@ top. See the paper and live demo:
 - 💻 HoLo project: https://github.com/Woojiggun/holo-hsl
 
 ## Changelog
+
+**0.5.0** — substrate-ablation toolkit (`hsl_embedding.ablation`): channel-group selection
+(`feature_groups` / `select_channels`), the frozen 256×18 value-LUT export (`value_lut`), and
+capacity-matched control substrates (`ControlEmbedding`: `hsl` / `learned` / `random` / `permuted`)
+sharing HSL's exact context dims and layout — controlled A/Bs over the value geometry, reproducible
+from `pip install` alone. Core encoder untouched: outputs bit-identical to 0.4.0; the base substrate
+remains zero-parameter (the `learned` control is an explicitly-labeled experimental baseline).
 
 **0.4.0** — fast paths & exactness hardening. **Feature values are unchanged — bit-identical to 0.3.0** (verified over text/image/audio/random/edge inputs × all flag combos):
 

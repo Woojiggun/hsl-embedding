@@ -39,6 +39,8 @@ diverge, or decay toward 0 with sequence length.
     emb = hsl.Embedding();  feats = emb(b"hello")
     ids = torch.randint(0, 256, (4, 128)); feats = emb(ids)   # v0.4: batched tensor path, any device
     assert hsl.decode(hsl.encode(b"hello")) == b"hello"
+    from hsl_embedding import ablation     # v0.5: channel groups + capacity-matched control substrates
+                                           # (learned / random-injective / permuted) for controlled A/Bs
 
 Author: Jinhyun Woo (ggunio5782@gmail.com). MIT-licensed; no learned weights included.
 """
@@ -50,7 +52,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = ["__version__", "FEAT_DIM", "FEAT_DIM_FULL", "FEAT_NAMES", "FEAT_NAMES_FULL", "feat_names",
            "ORIGIN_BIT", "CLOSURE_BIT", "BOUNDARY_D2_WEIGHT", "BOUNDARY_WINDOW_RADIUS",

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.5.0 — 2026-06-10
+
+Substrate-ablation toolkit. **Core encoder untouched — outputs bit-identical to 0.4.0**; the base
+substrate remains zero-parameter.
+
+### Added
+- `hsl_embedding.ablation` — the controlled A/Bs that isolate where HSL's contribution lives:
+  - `feature_groups()` / `channel_indices()` / `select_channels()` — feature-family ablations by
+    column selection, plus the canonical **18 value dims / 9 context dims** split (the 18 value dims
+    are pure functions of the byte's value — ONE frozen 256×18 LUT, a consequence of the anchor rule;
+    Δ² + boundary are the only sequence-dependent channels).
+  - `value_lut()` — export the frozen 256×18 per-value LUT (reproducibility packets, custom controls).
+  - `ControlEmbedding(kind, seed)` — drop-in counterparts of `hsl.Embedding()` emitting the same
+    `[..., L, 27]` layout with HSL's exact context dims in every variant:
+    `hsl` (frozen exact LUT — bit-identical to `hsl.Embedding()`), `learned` (trainable
+    `nn.Embedding(256, 18)`, seeded init), `random` (fixed injective LUT, per-channel moments matched
+    to HSL's — tests whether invertibility alone explains anything), `permuted` (HSL's own rows
+    permuted — identical marginal statistics, geometry destroyed: capacity vs geometry).
+  - The documented minimal pair: raw bits (8) vs Δ (8) — identical information/dims/scale, geometry
+    (Gray code) is the only difference; runnable via `include_bits=True` + `select_channels`.
+- `examples/substrate_ablation.py` — the full protocol in one screen.
+- `tests/test_ablation.py` — controls share exact context dims, swap only value dims; `permuted`
+  preserves per-column multisets exactly; `random` is injective, seeded, moment-matched; `learned`
+  is trainable and seed-reproducible; `hsl` is bit-identical to the real embedding.
+
 ## 0.4.0 — 2026-06-10
 
 Fast paths & exactness hardening. **Feature values are unchanged — bit-identical to 0.3.0**, verified
