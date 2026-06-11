@@ -192,8 +192,16 @@ benchmark-beating system. It gives exact structural signal; the *meaning* still 
 top. See the paper and live demo:
 
 - 📄 Paper: [A Feasibility Study of Change-Rate-Based Multimodal Unification](https://doi.org/10.5281/zenodo.20581805) (Zenodo)
-- 🌐 Live demo: https://holo-demo-p5txmh4dda-as.a.run.app
+- 🌐 Live demo: https://huggingface.co/spaces/ggunio/hsl-embedding-demo
 - 💻 HoLo project: https://github.com/Woojiggun/holo-hsl
+
+**Built on this substrate:** [`hsl-embedding-zero`](https://github.com/Woojiggun/hsl-embedding-zero)
+(`pip install hsl-embedding-zero`) feeds bytes to a transformer with **zero learned input
+parameters** — the frozen 27-D substrate replaces the embedding layer outright, with
+capacity-matched comparisons run via `hsl_embedding.ablation`; trained weights:
+[HoLo-6.5.1](https://huggingface.co/ggunio/HoLo-6.5.1). (Note: that package deliberately feeds the
+features unnormalized — channels keep fixed addresses and the first learned mixing happens inside
+attention; see its README for the measured trade-off vs the per-feature scaling recommended above.)
 
 ## Changelog
 
